@@ -10,7 +10,15 @@ const app = Fastify({
 });
 
 async function start() {
-  await app.register(multipart);
+  await app.register(multipart, {
+    limits: {
+      fieldNameSize: 100,        // Max field name size in bytes
+      fieldSize: 100,            // Max field value size in bytes
+      fields: 10,                 // Max number of non-file fields
+      fileSize: 500 * 1024 * 1024, // 500 MB limit (adjust this to your needs)
+      files: 1,                  // Allow only 1 file per upload request
+    }
+  });
 
   await app.register(swagger, {
     openapi: {

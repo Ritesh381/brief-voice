@@ -1,12 +1,21 @@
 // Backend/src/services/assemblyai.service.ts
 
+import "dotenv/config";
 import { AssemblyAI } from "assemblyai";
 import { execFileSync } from "child_process";
 import path from "path";
 import fs from "fs";
 
-// Initialize client with your environment variable
-const client = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY! });
+let client: AssemblyAI | null = null;
+
+function getAssemblyAIClient() {
+  if (!process.env.ASSEMBLYAI_API_KEY) {
+    throw new Error("ASSEMBLYAI_API_KEY is not configured.");
+  }
+
+  client ??= new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY });
+  return client;
+}
 
 interface TranscriptSegment {
   speaker: string;
@@ -40,10 +49,11 @@ export async function transcribeAudio(localFilePath: string): Promise<Transcript
 
     console.log(`[AssemblyAI Service] Uploading streaming binary to AssemblyAI staging...`);
     const fileStream = fs.createReadStream(wavPath);
-    const uploadUrl = await client.files.upload(fileStream);
+    const assembly = getAssemblyAIClient();
+    const uploadUrl = await assembly.files.upload(fileStream);
 
     console.log(`[AssemblyAI Service] Upload successful. Starting diarization pipeline...`);
-    const transcript = await client.transcripts.transcribe({
+    const transcript = await assembly.transcripts.transcribe({
       audio: uploadUrl,
       speaker_labels: true, // Crucial for parsing separate meeting attendees
     });
@@ -53,15 +63,12 @@ export async function transcribeAudio(localFilePath: string): Promise<Transcript
     }
 
     const fullText = transcript.text || "";
-    console.log(fullText)
     const segments = (transcript.utterances || []).map((u) => ({
       speaker: `Speaker ${u.speaker}`, // Normalizes "A" -> "Speaker A"
       text: u.text,
       startMs: u.start,
       endMs: u.end,
     }));
-    console.log(segments)
-
 
     return { fullText, segments };
   } catch (error) {

@@ -9,6 +9,13 @@ import path from "path";
 import { prisma } from "../db/prisma"; // Import your Prisma client instance
 import { processMeetingPipeline } from "../workers/processMeeting"; // Import your background pipeline worker
 
+function sanitizeUploadedFilename(filename: string) {
+  return path
+    .basename(filename)
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .replace(/^_+/, "") || "meeting-audio";
+}
+
 export default async function meetingRoutes(
   fastify: FastifyInstance
 ) {
@@ -58,7 +65,8 @@ export default async function meetingRoutes(
         recursive: true,
       });
 
-      const filename = `${meetingId}-${file.filename}`;
+      const originalFilename = sanitizeUploadedFilename(file.filename);
+      const filename = `${meetingId}-${originalFilename}`;
       const filepath = path.join(uploadsDir, filename);
 
       // STREAMING OPTIMIZATION: Pipe the inbound file data directly to disk.
@@ -70,7 +78,7 @@ export default async function meetingRoutes(
       const newMeeting = await prisma.meeting.create({
         data: {
           id: meetingId,
-          filename: file.filename,
+          filename: originalFilename,
           audioPath: filepath,
           status: "uploaded", // Default initial state
         },

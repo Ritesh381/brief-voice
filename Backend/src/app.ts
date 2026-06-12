@@ -1,3 +1,4 @@
+import "dotenv/config";
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
@@ -44,13 +45,15 @@ async function start() {
   });
 
   try {
+    const port = Number(process.env.PORT ?? 8000);
+
     await app.listen({
-      port: 8000,
+      port,
       host: "0.0.0.0",
     });
 
-    console.log(" Server running on port 8000");
-    console.log("Swagger: http://localhost:8000/docs");
+    console.log(`Server running on port ${port}`);
+    console.log(`Swagger: http://localhost:${port}/docs`);
   } catch (error) {
     app.log.error(error);
     process.exit(1);

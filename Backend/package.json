@@ -18,17 +18,20 @@
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.6",
     "@prisma/client": "^6.19.3",
+    "@xenova/transformers": "^2.17.2",
     "assemblyai": "^4.34.0",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5",
     "fastify-type-provider-zod": "^6.1.0",
     "groq-sdk": "^1.2.1",
     "openai": "^6.42.0",
+    "pdfkit": "^0.19.1",
     "prisma": "^6.19.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@types/pdfkit": "^0.17.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"

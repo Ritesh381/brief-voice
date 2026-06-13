@@ -29,6 +29,11 @@ venv/
 coverage/
 
 prisma/migrations
-prisma/breifvoice.db
+**/prisma/*.db
+**/prisma/*.db-journal
+
+# Uploaded audio + generated reports
+Backend/uploads/
+Backend/reports/
 
 AI/

@@ -50,12 +50,13 @@ Information loss in meetings costs teams real velocity:
 
 | Feature | Description | Status |
 |---|---|---|
-| 🎤 **Audio Transcription** | Transcribe uploaded audio files using AssemblyAI. Handles multiple speakers, background noise, and technical vocabulary | 🔄 In Progress |
-| 👥 **Speaker Diarization** | Identify and label different speakers. Allow users to assign names to speaker labels post-processing | 🔄 In Progress |
-| ✅ **Action Item Extraction** | Extract commitments with task, owner, and deadline. Present as a structured, checkable list | 🔄 In Progress |
-| 📄 **Structured Summary** | Generate meeting summary with sections: attendees, key decisions, discussion points, open questions, next steps | 🔄 In Progress |
-| 🔍 **Searchable Archive** | Index all transcripts and summaries. Support natural language queries across the full archive | 📅 Planned |
-| 📊 **Meeting Analytics** | Track speaking time, meeting frequency, action item completion rate, and recurring topics | 📅 Planned |
+| 🎤 **Audio Transcription** | Transcribe uploaded audio files using AssemblyAI. Handles multiple speakers, background noise, and technical vocabulary | ✅ Done |
+| 👥 **Speaker Diarization** | Identify and label different speakers. Allow users to assign names to speaker labels post-processing | ✅ Done |
+| ✅ **Action Item Extraction** | Extract commitments with task, owner, and deadline. Present as a structured, checkable list | ✅ Done |
+| 📄 **Structured Summary** | Generate meeting summary with sections: attendees, key decisions, discussion points, open questions, next steps | ✅ Done |
+| 🔍 **Searchable Archive** | Index all transcripts and summaries. Support natural language queries across the full archive | ✅ Done |
+| 📊 **Meeting Analytics** | Track speaking time, meeting count, and action item completion rate | ✅ Done |
+| 📄 **PDF Report** | Download a meeting report (summary + action item checklist) as a PDF | ✅ Done |
 
 ---
 
@@ -103,8 +104,8 @@ Information loss in meetings costs teams real velocity:
 | Service | Purpose |
 |---|---|
 | **AssemblyAI** | Audio transcription + Speaker diarization |
-| **Google Gemini** | Summarization + Action item extraction |
-| **ChromaDB** | Vector embeddings for semantic search |
+| **OpenRouter** (`openai/gpt-4o-mini`) | Summarization + Action item extraction |
+| **@xenova/transformers** (`all-MiniLM-L6-v2`) | Local embeddings for semantic search (stored in SQLite) |
 
 ### Frontend
 | Technology | Purpose |
@@ -341,13 +342,15 @@ The server will start at:
 - **API:** `http://localhost:8000`
 - **Swagger Docs:** `http://localhost:8000/docs`
 
-### 6. Frontend Setup *(Coming Soon)*
+### 6. Frontend Setup
 
 ```bash
 cd ../Frontend
 npm install
-npm run dev
+npm run dev   # http://localhost:5173
 ```
+
+> Or run `./setup.sh` from the repo root to set up backend + frontend in one shot.
 
 ---
 
@@ -398,15 +401,17 @@ GET /meetings
 
 ---
 
-### Get Meeting Details *(Planned)*
+### Get Meeting Details
 ```http
 GET /meetings/:id
 ```
 Returns full transcript, speaker segments, summary, and action items.
 
+Related: `PUT /meetings/:id/speakers` (rename speakers), `PUT /meetings/:id/action-items/:itemId` (toggle), `DELETE /meetings/:id`, `GET /meetings/:id/report` (PDF).
+
 ---
 
-### Semantic Search *(Planned)*
+### Semantic Search
 ```http
 GET /search?q=what+was+decided+about+the+API+design
 ```
@@ -414,7 +419,7 @@ Returns relevant transcript snippets from across all meetings.
 
 ---
 
-### Analytics *(Planned)*
+### Analytics
 ```http
 GET /analytics/overview
 GET /analytics/meeting/:id
@@ -471,9 +476,12 @@ GET /analytics/meeting/:id
 |---|---|---|
 | `DATABASE_URL` | SQLite database path | ✅ Yes |
 | `ASSEMBLYAI_API_KEY` | AssemblyAI API key for transcription | ✅ Yes |
-| `GEMINI_API_KEY` | Google Gemini API key for summaries | ✅ Yes |
+| `OPENROUTER_API_KEY` | OpenRouter API key for summaries + action items | ✅ Yes |
+| `OPENROUTER_SITE_URL` | Referer header sent to OpenRouter | ❌ Optional |
+| `OPENROUTER_APP_NAME` | App name sent to OpenRouter | ❌ Optional |
 | `PORT` | Server port (default: 8000) | ❌ Optional |
-| `CHROMA_HOST` | ChromaDB host URL | 📅 Planned |
+
+> Semantic search uses local embeddings (`@xenova/transformers`) stored in SQLite — no separate vector DB or API key required. `ffmpeg` must be installed for audio transcoding.
 
 ---
 

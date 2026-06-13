@@ -4,6 +4,7 @@ import { prisma } from "../db/prisma";
 import { transcribeAudio } from "../services/assemblyai.service";
 // Switch out Gemini service reference for our newly built OpenAI engine module
 import { generateSummary, extractActionItems } from "../services/openai.service";
+import { indexMeeting } from "../services/search.service";
 
 interface Segment {
   speaker: string;
@@ -123,7 +124,16 @@ export async function processMeetingPipeline(meetingId: string, filePath: string
       });
     }
 
-    // 5. SUCCESS! Finalize pipeline lifecycle flag to processed
+    // 5. Index transcript + summary into the vector store for semantic search.
+    //    Failure here must not fail the whole meeting — log and continue.
+    console.log(`[Worker] Step 5: Indexing meeting into the search archive...`);
+    try {
+      await indexMeeting(meetingId);
+    } catch (indexErr) {
+      console.error(`[Worker] Search indexing failed for ${meetingId}:`, indexErr);
+    }
+
+    // 6. SUCCESS! Finalize pipeline lifecycle flag to processed
     await prisma.meeting.update({
       where: { id: meetingId },
       data: { status: "processed" },

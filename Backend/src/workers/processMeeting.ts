@@ -5,6 +5,39 @@ import { transcribeAudio } from "../services/assemblyai.service";
 // Switch out Gemini service reference for our newly built OpenAI engine module
 import { generateSummary, extractActionItems } from "../services/openai.service";
 
+interface Segment {
+  speaker: string;
+  text: string;
+  startMs: number;
+  endMs: number;
+}
+
+// Upper bound on characters sent to the LLM. gpt-4o-mini has a 128k-token
+// window; ~120k chars (~30k tokens) leaves ample room for the prompt + output.
+const MAX_TRANSCRIPT_CHARS = 120_000;
+
+/**
+ * Builds a speaker-labelled transcript ("Speaker A: ...") so the LLM can
+ * attribute decisions and action-item owners to the right people instead of
+ * collapsing everything into one anonymous block of text.
+ */
+function buildLabelledTranscript(segments: Segment[], fullText: string): string {
+  if (segments.length === 0) return fullText;
+  return segments.map((s) => `${s.speaker}: ${s.text}`).join("\n");
+}
+
+/**
+ * Clamps very long transcripts so a single huge meeting cannot blow the
+ * model's context window. Keeps the head and logs a warning when it truncates.
+ */
+function clampTranscript(text: string, meetingId: string): string {
+  if (text.length <= MAX_TRANSCRIPT_CHARS) return text;
+  console.warn(
+    `[Worker] Transcript for ${meetingId} is ${text.length} chars; truncating to ${MAX_TRANSCRIPT_CHARS} for LLM processing.`
+  );
+  return `${text.slice(0, MAX_TRANSCRIPT_CHARS)}\n\n[...transcript truncated for length...]`;
+}
+
 /**
  * Handles the async transcription and AI processing pipeline process.
  */
@@ -52,11 +85,16 @@ export async function processMeetingPipeline(meetingId: string, filePath: string
       data: { status: "transcribed" },
     });
 
-    // 3. Extract unique historical speakers for context injection
+    // 3. Build a speaker-labelled transcript so the LLM can attribute
+    //    decisions and action items to specific people, then clamp its length.
     const uniqueSpeakers = Array.from(new Set(segments.map((s) => s.speaker)));
+    const labelledTranscript = clampTranscript(
+      buildLabelledTranscript(segments, fullText),
+      meetingId
+    );
 
     console.log(`[Worker] Step 3: Triggering OpenAI structured summary synthesis...`);
-    const summaryData = await generateSummary(fullText, uniqueSpeakers);
+    const summaryData = await generateSummary(labelledTranscript, uniqueSpeakers);
 
     // Save summary text data objects to SQLite
     await prisma.meetingSummary.create({
@@ -71,7 +109,7 @@ export async function processMeetingPipeline(meetingId: string, filePath: string
     });
 
     console.log(`[Worker] Step 4: Extracting interactive action items checklists via OpenAI...`);
-    const actionItemsData = await extractActionItems(fullText);
+    const actionItemsData = await extractActionItems(labelledTranscript);
 
     if (actionItemsData.length > 0) {
       await prisma.actionItem.createMany({

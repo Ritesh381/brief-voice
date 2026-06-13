@@ -128,7 +128,11 @@ export async function generateSummary(transcriptText: string, identifiedSpeakers
       messages: [
         {
           role: "system",
-          content: "You are an expert technical meeting intelligence analyst. Synthesize transcripts into clean, accurate summaries matching the schema exactly.",
+          content:
+            "You are an expert technical meeting intelligence analyst. The transcript is speaker-labelled (e.g. 'Speaker A: ...'). " +
+            "Synthesize it into a clean, accurate summary matching the schema exactly. " +
+            "Populate every section; if a section genuinely has no content, return an empty array rather than inventing items. " +
+            "Attribute attendees and decisions to the named/labelled speakers shown in the transcript.",
         },
         {
           role: "user",
@@ -168,7 +172,10 @@ export async function extractActionItems(transcriptText: string): Promise<OpenAI
       messages: [
         {
           role: "system",
-          content: "Extract all explicit action items, commitments, and follow-ups made by participants in the transcript.",
+          content:
+            "Extract all explicit action items, commitments, and follow-ups made by participants in the transcript. " +
+            "The transcript is speaker-labelled (e.g. 'Speaker A: ...'); set 'owner' to the speaker who committed to or was assigned the task. " +
+            "Only capture explicitly stated tasks — do not invent items. Use an empty string for owner or deadline when not stated.",
         },
         {
           role: "user",

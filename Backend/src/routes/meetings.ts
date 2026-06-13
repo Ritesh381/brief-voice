@@ -9,6 +9,7 @@ import path from "path";
 import { prisma } from "../db/prisma"; // Import your Prisma client instance
 import { processMeetingPipeline } from "../workers/processMeeting"; // Import your background pipeline worker
 import { deleteMeetingEmbeddings } from "../services/search.service";
+import { generatePDFReport } from "../services/pdf.service";
 import {
   MeetingParamsSchema,
   SpeakerLabelsSchema,
@@ -300,6 +301,34 @@ export default async function meetingRoutes(fastify: FastifyInstance) {
       }
 
       return reply.status(200).send({ deleted: true, id });
+    }
+  );
+
+  // 7. DOWNLOAD A PDF REPORT FOR A MEETING
+  fastify.get(
+    "/meetings/:id/report",
+    {
+      schema: {
+        tags: ["Meetings"],
+        summary: "Download a PDF report for a meeting",
+        params: MeetingParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const meeting = await prisma.meeting.findUnique({ where: { id } });
+      if (!meeting) {
+        return reply.status(404).send({ error: "Meeting not found" });
+      }
+
+      const pdf = await generatePDFReport(id);
+      const safeName = meeting.filename.replace(/\.[^.]+$/, "") || "meeting";
+
+      return reply
+        .header("Content-Type", "application/pdf")
+        .header("Content-Disposition", `attachment; filename="${safeName}-report.pdf"`)
+        .send(pdf);
     }
   );
 }
